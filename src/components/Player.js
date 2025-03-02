@@ -264,6 +264,14 @@ export class Player {
         if (moved && movementDirection.length() > 0) {
             movementDirection.normalize();
             const targetRotation = Math.atan2(movementDirection.x, -movementDirection.z);
+            
+            // Store the last valid movement direction for shooting
+            this.lastMovementDirection = new THREE.Vector3(
+                movementDirection.x,
+                0,
+                movementDirection.z
+            ).normalize();
+            
             this.mesh.rotation.y = targetRotation;
         }
         
@@ -305,10 +313,17 @@ export class Player {
         // Update last fire time
         this.lastFireTime = currentTime;
         
-        // Always use the direction the player is facing based on their rotation
-        // This ensures consistency with the player's visual orientation
-        const direction = new THREE.Vector3(0, 0, -1);
-        direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mesh.rotation.y);
+        // Use the direction the player is facing based on their rotation
+        let direction;
+        
+        // If we have a last movement direction, use that
+        if (this.lastMovementDirection) {
+            direction = this.lastMovementDirection.clone();
+        } else {
+            // Fallback to the direction based on rotation
+            direction = new THREE.Vector3(0, 0, -1);
+            direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mesh.rotation.y);
+        }
         
         // Keep fireball trajectory flat (parallel to ground)
         direction.y = 0;

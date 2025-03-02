@@ -74,9 +74,192 @@
             cursor: pointer;
             pointer-events: auto;
         }
+        /* Mini-map Styles */
+        #mini-map-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ff00;
+            border-radius: 50%;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+        #mini-map {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        /* Radar sweep effect */
+        #radar-sweep {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(0, 255, 0, 0.1) 50%, transparent 50%);
+            border-radius: 50%;
+            animation: radar-sweep 4s infinite linear;
+            pointer-events: none;
+        }
+        @keyframes radar-sweep {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        /* Radar grid lines */
+        #radar-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .radar-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 1px solid rgba(0, 255, 0, 0.2);
+            border-radius: 50%;
+        }
+        .radar-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 1px;
+            background-color: rgba(0, 255, 0, 0.2);
+            transform-origin: center left;
+        }
+        .mini-map-player {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: #00ff00;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            box-shadow: 0 0 5px #00ff00;
+        }
+        .mini-map-goblin {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            background-color: #ff0000;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            box-shadow: 0 0 3px #ff0000;
+        }
+        .mini-map-direction {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-bottom: 8px solid #00ff00;
+            transform-origin: center bottom;
+            z-index: 11;
+        }
+        /* Loading Screen Styles */
+        #loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000011;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        #loading-bar-container {
+            width: 50%;
+            height: 20px;
+            background-color: #333;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        #loading-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #f00;
+            transition: width 0.3s;
+        }
+        #loading-text {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        /* Start Game Dialog Styles */
+        #start-game-dialog {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 900;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            border: 2px solid #f00;
+            max-width: 500px;
+        }
+        #start-game-dialog h1 {
+            color: #f00;
+            margin-top: 0;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+        }
+        #start-game-dialog p {
+            margin: 15px 0;
+            line-height: 1.5;
+        }
+        #start-button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background-color: #f00;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            pointer-events: auto;
+            font-size: 18px;
+            transition: all 0.3s;
+        }
+        #start-button:hover {
+            background-color: #ff3333;
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div id="loading-text">Loading Game...</div>
+        <div id="loading-bar-container">
+            <div id="loading-bar"></div>
+        </div>
+    </div>
+    
+    <!-- Start Game Dialog -->
+    <div id="start-game-dialog">
+        <h1>Fire Thrower vs Goblins</h1>
+        <p>Welcome to the magical forest! As a powerful wizard, you must defend yourself against hordes of goblins using your fire magic.</p>
+        <p>Use WASD to move around the forest and SPACE to cast fireballs at the approaching goblins.</p>
+        <p>How long can you survive?</p>
+        <button id="start-button">Start Game</button>
+    </div>
+    
     <div id="ui">
         <div id="instructions">WASD to move, SPACE to shoot fireballs</div>
         <div id="health-container"><div id="health-bar"></div></div>
@@ -85,6 +268,14 @@
             <h2>Game Over</h2>
             <p>Your score: <span id="final-score">0</span></p>
             <button id="restart-button">Play Again</button>
+        </div>
+        
+        <!-- Mini-map -->
+        <div id="mini-map-container">
+            <div id="mini-map">
+                <div id="radar-sweep"></div>
+                <div id="radar-grid"></div>
+            </div>
         </div>
     </div>
     

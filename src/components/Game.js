@@ -18,7 +18,8 @@ export class Game {
                 player: 1.0,    // Player collision radius
                 goblin: 0.8,    // Goblin collision radius
                 fireball: 0.3   // Fireball collision radius
-            }
+            },
+            gameStarted: false  // Flag to track if game has started
         };
 
         // Game objects
@@ -36,8 +37,8 @@ export class Game {
         // Setup input listeners
         this.setupInputListeners();
         
-        // Load assets
-        this.loadAssets();
+        // Load assets with progress tracking
+        this.loadAssetsWithProgress();
         
         // Performance monitoring
         this.fpsCounter = 0;
@@ -96,10 +97,11 @@ export class Game {
     
     createStarrySky() {
         // Create stars
-        const starCount = 1000;
+        const starCount = 2000; // Increased star count for more visibility
         const starGeometry = new THREE.BufferGeometry();
         const starPositions = [];
         const starColors = [];
+        const starSizes = []; // Add varying sizes for stars
         
         for (let i = 0; i < starCount; i++) {
             // Random position on a sphere
@@ -125,21 +127,59 @@ export class Game {
                 // White star with slight blue tint
                 starColors.push(0.8, 0.9, 1.0);
             }
+            
+            // Random star size
+            const size = 0.1 + Math.random() * 0.3;
+            starSizes.push(size);
         }
         
         starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
         starGeometry.setAttribute('color', new THREE.Float32BufferAttribute(starColors, 3));
+        starGeometry.setAttribute('size', new THREE.Float32BufferAttribute(starSizes, 1));
         
         const starMaterial = new THREE.PointsMaterial({
-            size: 0.15,
+            size: 0.2,
             vertexColors: true,
             transparent: true,
-            opacity: 0.8
+            opacity: 0.9,
+            sizeAttenuation: true
         });
         
         const stars = new THREE.Points(starGeometry, starMaterial);
         this.scene.add(stars);
         this.stars = stars;
+        
+        // Create twinkling effect for stars
+        this.twinkleStars = () => {
+            if (!this.stars) return;
+            
+            const positions = this.stars.geometry.attributes.position;
+            const colors = this.stars.geometry.attributes.color;
+            const sizes = this.stars.geometry.attributes.size;
+            
+            for (let i = 0; i < positions.count; i++) {
+                if (Math.random() > 0.99) {
+                    const brightness = 0.7 + Math.random() * 0.3;
+                    colors.array[i * 3] *= brightness;
+                    colors.array[i * 3 + 1] *= brightness;
+                    colors.array[i * 3 + 2] *= brightness;
+                    
+                    // Also vary size for twinkling effect
+                    sizes.array[i] = 0.1 + Math.random() * 0.3;
+                }
+            }
+            
+            colors.needsUpdate = true;
+            sizes.needsUpdate = true;
+        };
+        
+        // Add flying birds to the night sky
+        this.birds = [];
+        const birdCount = 15;
+        
+        for (let i = 0; i < birdCount; i++) {
+            this.createBird();
+        }
         
         // Create moon
         const moonGeometry = new THREE.SphereGeometry(5, 16, 16);
@@ -164,6 +204,111 @@ export class Game {
         
         const moonGlow = new THREE.Mesh(moonGlowGeometry, moonGlowMaterial);
         moon.add(moonGlow);
+    }
+
+    createBird() {
+        // Create a simple bird shape using a custom geometry
+        const birdShape = new THREE.Shape();
+        
+        // Draw bird silhouette
+        birdShape.moveTo(0, 0);
+        birdShape.bezierCurveTo(0.5, 0.3, 1, 0, 1.5, 0);
+        birdShape.bezierCurveTo(1, -0.3, 0.5, -0.3, 0, 0);
+        
+        const extrudeSettings = {
+            steps: 1,
+            depth: 0.1,
+            bevelEnabled: false
+        };
+        
+        const birdGeometry = new THREE.ExtrudeGeometry(birdShape, extrudeSettings);
+        const birdMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x000000,
+            side: THREE.DoubleSide
+        });
+        
+        const bird = new THREE.Mesh(birdGeometry, birdMaterial);
+        
+        // Random position in the sky
+        const x = (Math.random() - 0.5) * 100;
+        const y = 20 + Math.random() * 30;
+        const z = (Math.random() - 0.5) * 100;
+        
+        bird.position.set(x, y, z);
+        
+        // Random rotation
+        bird.rotation.x = Math.PI / 2;
+        bird.rotation.z = Math.random() * Math.PI * 2;
+        
+        // Random scale
+        const scale = 0.2 + Math.random() * 0.3;
+        bird.scale.set(scale, scale, scale);
+        
+        // Add flight properties
+        bird.userData = {
+            speed: 0.05 + Math.random() * 0.1,
+            direction: new THREE.Vector3(
+                (Math.random() - 0.5) * 2,
+                (Math.random() - 0.5) * 0.5,
+                (Math.random() - 0.5) * 2
+            ).normalize(),
+            wingFlapSpeed: 0.1 + Math.random() * 0.2,
+            wingFlapDirection: 1,
+            wingFlapAmount: 0
+        };
+        
+        this.scene.add(bird);
+        this.birds.push(bird);
+        
+        return bird;
+    }
+    
+    updateBirds(deltaTime) {
+        if (!this.birds) return;
+        
+        this.birds.forEach(bird => {
+            // Move bird
+            const { speed, direction, wingFlapSpeed, wingFlapDirection } = bird.userData;
+            
+            bird.position.x += direction.x * speed * deltaTime;
+            bird.position.y += direction.y * speed * deltaTime;
+            bird.position.z += direction.z * speed * deltaTime;
+            
+            // Flap wings
+            bird.userData.wingFlapAmount += wingFlapSpeed * wingFlapDirection * deltaTime;
+            
+            if (bird.userData.wingFlapAmount > 0.3) {
+                bird.userData.wingFlapDirection = -1;
+            } else if (bird.userData.wingFlapAmount < -0.3) {
+                bird.userData.wingFlapDirection = 1;
+            }
+            
+            // Apply wing flapping
+            bird.scale.y = 1 + bird.userData.wingFlapAmount;
+            
+            // Check if bird is out of bounds and reset if needed
+            const bounds = 100;
+            if (
+                Math.abs(bird.position.x) > bounds ||
+                Math.abs(bird.position.y - 30) > bounds ||
+                Math.abs(bird.position.z) > bounds
+            ) {
+                // Reset bird position to the opposite side
+                bird.position.x = -bird.position.x * 0.9;
+                bird.position.z = -bird.position.z * 0.9;
+                
+                // Update direction to head back into the scene
+                bird.userData.direction.x = -bird.userData.direction.x;
+                bird.userData.direction.z = -bird.userData.direction.z;
+                
+                // Update rotation to match new direction
+                bird.lookAt(
+                    bird.position.x + bird.userData.direction.x,
+                    bird.position.y + bird.userData.direction.y,
+                    bird.position.z + bird.userData.direction.z
+                );
+            }
+        });
     }
 
     toggleDebugMode() {
@@ -435,13 +580,64 @@ export class Game {
         });
     }
 
-    loadAssets() {
+    loadAssetsWithProgress() {
+        // Track loading progress
+        let totalAssets = 2; // Number of assets to load (wizard and goblin models)
+        let loadedAssets = 0;
+        
+        // Function to update loading progress
+        const updateProgress = () => {
+            loadedAssets++;
+            const progress = Math.floor((loadedAssets / totalAssets) * 100);
+            
+            // Dispatch progress event
+            const progressEvent = new CustomEvent('loadingProgress', {
+                detail: { progress }
+            });
+            document.dispatchEvent(progressEvent);
+            
+            // Check if all assets are loaded
+            if (loadedAssets >= totalAssets) {
+                // Simulate additional loading time for better UX
+                setTimeout(() => {
+                    // Dispatch loading complete event
+                    const completeEvent = new CustomEvent('loadingComplete');
+                    document.dispatchEvent(completeEvent);
+                }, 1000);
+            }
+        };
+        
+        // Create loader
+        const loader = new GLTFLoader();
+        
+        // Load wizard model
+        loader.load('wizard.glb', (gltf) => {
+            this.wizardModel = gltf.scene;
+            updateProgress();
+        });
+        
+        // Load goblin model
+        loader.load('goblin.glb', (gltf) => {
+            this.goblinModel = gltf.scene;
+            updateProgress();
+        });
+    }
+    
+    startGame() {
+        // Set game as started
+        this.state.gameStarted = true;
+        
         // Create player
         this.player = new Player(this);
         this.objectsToUpdate.push(this.player);
         
         // Spawn initial goblins
-        this.spawnGoblins(3); // Reduced from 5
+        this.spawnGoblins(3);
+        
+        // Start animation loop if not already started
+        if (!this.animationStarted) {
+            this.start();
+        }
     }
 
     spawnGoblins(count) {
@@ -537,9 +733,11 @@ export class Game {
     gameOver() {
         this.state.gameOver = true;
         
-        // Show game over screen
-        document.getElementById('game-over').style.display = 'block';
-        document.getElementById('final-score').textContent = this.state.score;
+        // Dispatch event for UI to show game over screen
+        const gameOverEvent = new CustomEvent('gameOver', {
+            detail: { score: this.state.score }
+        });
+        document.dispatchEvent(gameOverEvent);
     }
 
     restart() {
@@ -548,29 +746,31 @@ export class Game {
         this.state.score = 0;
         this.state.gameOver = false;
         
-        // Clear all goblins and fireballs
-        [...this.goblins, ...this.fireballs].forEach(obj => {
-            this.removeObject(obj);
-        });
+        // Clear existing goblins and fireballs
+        [...this.goblins].forEach(goblin => this.removeObject(goblin));
+        [...this.fireballs].forEach(fireball => this.removeObject(fireball));
         
-        // Reset player position
+        // Create new player
         if (this.player) {
-            this.player.reset();
+            this.removeObject(this.player);
         }
+        this.player = new Player(this);
+        this.objectsToUpdate.push(this.player);
         
-        // Spawn new goblins
-        this.spawnGoblins(3); // Reduced from 5
+        // Spawn initial goblins
+        this.spawnGoblins(3);
         
-        // Hide game over screen
-        document.getElementById('game-over').style.display = 'none';
+        // Dispatch event for health update
+        const healthEvent = new CustomEvent('healthChanged', {
+            detail: { health: this.state.playerHealth }
+        });
+        document.dispatchEvent(healthEvent);
         
-        // Update UI
-        document.dispatchEvent(new CustomEvent('healthChanged', { 
-            detail: { health: this.state.playerHealth } 
-        }));
-        document.dispatchEvent(new CustomEvent('scoreChanged', { 
-            detail: { score: this.state.score } 
-        }));
+        // Dispatch event for score update
+        const scoreEvent = new CustomEvent('scoreChanged', {
+            detail: { score: this.state.score }
+        });
+        document.dispatchEvent(scoreEvent);
     }
 
     togglePause() {
@@ -580,6 +780,9 @@ export class Game {
     update() {
         if (this.state.paused || this.state.gameOver) return;
         
+        // Skip updates if game hasn't started yet
+        if (!this.state.gameStarted) return;
+        
         const deltaTime = this.clock.getDelta();
         const elapsedTime = this.clock.getElapsedTime();
         
@@ -587,6 +790,16 @@ export class Game {
         this.objectsToUpdate.forEach(object => {
             object.update(deltaTime);
         });
+        
+        // Update flying birds in the sky
+        if (this.birds && this.birds.length > 0) {
+            this.updateBirds(deltaTime);
+        }
+        
+        // Twinkle stars occasionally
+        if (this.stars && this.twinkleStars && Math.random() < 0.05) {
+            this.twinkleStars();
+        }
         
         // Check for collisions
         this.checkCollisions();
@@ -1007,6 +1220,7 @@ export class Game {
     }
 
     start() {
+        this.animationStarted = true;
         this.animate();
     }
 

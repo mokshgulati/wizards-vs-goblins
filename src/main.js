@@ -6,8 +6,8 @@ import { UI } from './components/UI.js';
 const game = new Game();
 const ui = new UI(game);
 
-// Start the game
-game.start();
+// Note: The game will now start after the loading screen and start button click
+// The actual game start is handled by the UI class through the startGame method
 
 // Handle window resize
 window.addEventListener('resize', () => {
