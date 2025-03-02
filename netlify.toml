@@ -1,0 +1,16 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# This ensures that the 3D model files are copied to the dist directory during build
+[[plugins]]
+  package = "@netlify/plugin-functions-core"
+
+[[plugins.inputs.postBuild]]
+  command = "cp *.glb dist/"
+
+# Redirect all routes to index.html for SPA routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200 

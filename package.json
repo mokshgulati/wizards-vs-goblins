@@ -1,0 +1,22 @@
+{
+  "name": "game",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^34.3.0",
+    "three": "^0.174.0"
+  },
+  "devDependencies": {
+    "vite": "^5.2.6"
+  },
+  "description": "Fire Thrower vs Goblins Game"
+}
